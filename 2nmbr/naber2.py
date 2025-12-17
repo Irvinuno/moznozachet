@@ -1,80 +1,92 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 
-# ===============================
-# Исходные данные
-# ===============================
-f = 6.5*10**9                 # частота, Гц
-c = 3*10**8                   # скорость света, м/с
-lambd = c / f               # длина волны, м
-k = 2 * np.pi / lambd       # волновое число
 
-# По условию: 2l / lambda = 0.01
-l = 0.005 * lambd           # длина одного плеча вибратора
+def results_from_py():
+    with open('dipoll.txt', 'r', encoding='utf-8') as file:
+        file.readline()
+        
+        axis =[[],[],[]]
 
-# ===============================
-# Угловая сетка
-# ===============================
-theta = np.linspace(1e-6, np.pi - 1e-6, 2000)
+        for line in file:
+            theta, d_times, d_db = map(float, line.split())
+            axis[0].append(theta)
+            axis[1].append(d_db)
+            axis[2].append(d_times)
+        
+        return axis
 
-# ===============================
-# Напряженность поля (формула 1)
-# ===============================
-E_theta = (np.cos(k * l * np.cos(theta)) - np.cos(k * l)) / np.sin(theta)
 
-# ===============================
-# Нормированная ДН по полю (формула 3)
-# ===============================
-F = np.abs(E_theta)
-F = F / np.max(F)
+def results_from_CST():
+    with open('pip.txt', 'r', encoding='utf-8') as file:
+        axis = [[],[],[]]
 
-# ===============================
-# Расчет максимального КНД (формула 2)
-# ===============================
-integral = np.trapz(F**2 * np.sin(theta), theta)
-D_max = 4 * np.pi / (2 * np.pi * integral)
-D_max_db = 10 * np.log10(D_max)
+        for line in file:
+            parts = line.split()
+            if len(parts) >= 3:
+                try:
+                    #1 столбец
+                    theta_deg = float(parts[0])
+                    #3 столбец
+                    d_db_str = parts[2].replace(',', '.')
+                    d_db = float(d_db_str)
+                    
+                    axis[0].append(np.deg2rad(theta_deg))
+                    axis[1].append(d_db)
+                    axis[2].append(10**(d_db/10))
+                except:
+                    continue
+        
+        return axis
 
-print("Максимальный КНД:")
-print(f"D_max = {D_max:.4f}")
-print(f"D_max = {D_max_db:.2f} дБ")
 
-# ===============================
-# КНД как функция угла (формула 4)
-# ===============================
-D_theta = D_max * F**2
-D_theta_db = 10 * np.log10(D_theta)
+def creating_plot(cst, python):
+        
+    fig = plt.figure(figsize=(12, 10))
+    fig.suptitle('Разница между\nPython и CST')
 
-# ===============================
-# Графики в декартовой системе
-# ===============================
-plt.figure()
-plt.plot(theta * 180 / np.pi, D_theta)
-plt.xlabel("θ, град")
-plt.ylabel("D(θ)")
-plt.title("КНД в разах")
-plt.grid()
-plt.show()
+    ax1 = fig.add_subplot(2, 2, 1)  
+    ax2 = fig.add_subplot(2, 2, 2)  
 
-plt.figure()
-plt.plot(theta * 180 / np.pi, D_theta_db)
-plt.xlabel("θ, град")
-plt.ylabel("D(θ), дБ")
-plt.title("КНД в дБ")
-plt.grid()
-plt.show()
+    ax1.plot(cst[0], cst[1], label='CST')
+    ax1.plot(python[0], python[1], label='Python')
+    ax1.set_title('D, dBi')
+    ax1.set_xlabel("Theta")
+    ax1.set_ylabel("dBi")
+    ax1.grid(True)
+    ax1.legend()
 
-# ===============================
-# Полярные диаграммы
-# ===============================
-plt.figure()
-ax = plt.subplot(111, polar=True)
-ax.plot(theta, D_theta)
-ax.set_title("Полярная диаграмма КНД (разы)")
-plt.show()
+    ax2.plot(cst[0], cst[2], label='CST')
+    ax2.plot(python[0], python[2], label='Python')
+    ax2.set_title('D, разы')
+    ax2.set_xlabel("Theta")
+    ax2.set_ylabel("разы")
+    ax2.grid(True)
+    ax2.legend()
 
-plt.figure()
-ax = plt.subplot(111, polar=True)
-ax.plot(theta, D_theta_db)
-ax.set_title("Полярная диаграмма КНД (дБ)")
-plt.show()
+    ax3 = fig.add_subplot(2, 2, 3, polar=True)
+    ax4 = fig.add_subplot(2, 2, 4, polar=True)
+
+    ax3.plot(cst[0], cst[1], label='CST')
+    ax3.plot(python[0], python[1], label='Python')
+    ax3.set_title('D, dBi')
+    ax3.grid(True)
+    ax3.legend()
+
+    ax4.plot(cst[0], cst[2], label='CST')
+    ax4.plot(python[0], python[2], label='Python')
+    ax4.set_title('D, разы')
+    ax4.grid(True)
+    ax4.legend()
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.show()
+    plt.savefig("gip.png")
+
+
+def main():
+    creating_plot(cst=results_from_CST(), python=results_from_py())
+
+
+if __name__=='__main__':
+    main()
