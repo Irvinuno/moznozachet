@@ -3,7 +3,7 @@ import numpy as np
 
 
 def results_from_py():
-    with open('dipoll.txt', 'r', encoding='utf-8') as file:
+    with open('analyse_results.txt', 'r', encoding='utf-8') as file:
         file.readline()
         
         axis =[[],[],[]]
